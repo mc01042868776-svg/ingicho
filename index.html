@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 기반 전공별 취업률 예측 시스템</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 700px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #1a73e8; font-size: 26px; margin-bottom: 5px; }
+        p.subtitle { text-align: center; color: #5f6368; font-size: 14px; margin-bottom: 30px; }
+        .form-row { display: flex; gap: 15px; margin-bottom: 20px; }
+        .form-group { flex: 1; }
+        label { display: block; font-weight: bold; margin-bottom: 8px; color: #3c4043; }
+        select, input { width: 100%; padding: 12px; border: 1px solid #dadce0; border-radius: 8px; font-size: 16px; box-sizing: border-box; outline: none; }
+        select:focus, input:focus { border-color: #1a73e8; }
+        button { width: 100%; padding: 16px; background-color: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: background 0.3s; }
+        button:hover { background-color: #1557b0; }
+        
+        .result-section { margin-top: 30px; display: none; border-top: 2px solid #f0f2f5; padding-top: 25px; }
+        .main-result { text-align: center; background: #e8f0fe; padding: 25px; border-radius: 12px; margin-bottom: 20px; }
+        .main-result h2 { margin: 0 0 10px 0; color: #1967d2; font-size: 18px; }
+        .main-result .rate { font-size: 42px; font-weight: 900; color: #1a73e8; margin: 0; }
+        
+        .grid-cards { display: flex; gap: 15px; }
+        .card { flex: 1; background: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #e8eaed; text-align: center; }
+        .card h3 { margin: 0 0 10px 0; font-size: 15px; color: #5f6368; }
+        .card p.val { font-size: 24px; font-weight: bold; margin: 0 0 5px 0; color: #202124; }
+        .card p.sub { font-size: 14px; margin: 0; font-weight: bold; }
+        
+        .good { color: #188038; }
+        .bad { color: #d93025; }
+        .neutral { color: #5f6368; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📈 AI 기반 전공 취업률 예측 리포트</h1>
+    <p class="subtitle">오렌지3(Orange3) 머신러닝 예측 모델 결과</p>
+    
+    <div class="form-row">
+        <div class="form-group">
+            <label>1. 공시연도 선택</label>
+            <input type="number" id="year" value="2026" min="2020" max="2040">
+        </div>
+        <div class="form-group">
+            <label>2. 전공 선택</label>
+            <select id="major">
+                <option value="1.공학(IT)">1.공학(IT)</option>
+                <option value="2.의약보건">2.의약보건</option>
+                <option value="3.상경">3.상경</option>
+                <option value="4.공학(제조)">4.공학(제조)</option>
+                <option value="5.예체능">5.예체능</option>
+                <option value="6.교육">6.교육</option>
+                <option value="7.사회과학">7.사회과학</option>
+                <option value="8.인문">8.인문</option>
+                <option value="9.자연과학/기타">9.자연과학/기타</option>
+            </select>
+        </div>
+    </div>
+    <button onclick="runAnalysis()">결과 분석하기</button>
+
+    <div class="result-section" id="resultBox">
+        <div class="main-result">
+            <h2 id="mainTitle">예상 취업률</h2>
+            <p class="rate" id="mainRate">0.00%</p>
+        </div>
+        
+        <div class="grid-cards">
+            <div class="card">
+                <h3 id="fieldTitle">계열 평균 대비</h3>
+                <p class="val" id="fieldRate">0.00%</p>
+                <p class="sub" id="fieldRatio"></p>
+            </div>
+            <div class="card">
+                <h3 id="prevTitle">전년도 대비</h3>
+                <p class="val" id="prevRate">0.00%</p>
+                <p class="sub" id="prevDiff"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const db = {"2019": {}, "2020": {}, "2021": {}, "2022": {}, "2023": {}, "2024": {}, "2025": {}, "2026": {}, "2027": {}, "2028": {}, "2029": {}, "2030": {}, "2031": {}, "2032": {}, "2033": {}, "2034": {}, "2035": {}, "2036": {}, "2037": {}, "2038": {}, "2039": {}, "2040": {}};
+
+    function runAnalysis() {
+        const year = parseInt(document.getElementById('year').value);
+        const major = document.getElementById('major').value;
+
+        if (year < 2020 || year > 2040) {
+            alert("조회 가능 연도는 2020년 ~ 2040년입니다.");
+            return;
+        }
+        if (!db[year] || !db[year][major]) {
+            alert("오류: 예측 데이터가 정상적으로 구워지지 않았습니다.");
+            return;
+        }
+
+        const currentData = db[year][major];
+        const prevData = db[year - 1] ? db[year - 1][major] : null;
+
+        const pMajor = currentData.pred_major;
+        const pField = currentData.pred_field;
+        const fieldName = currentData.field;
+
+        document.getElementById('resultBox').style.display = 'block';
+
+        // 3. 메인 결과
+        document.getElementById('mainTitle').innerText = `${year}년 [${major}] 예상 취업률`;
+        document.getElementById('mainRate').innerText = pMajor.toFixed(2) + '%';
+
+        // 4. 계열 평균 비교
+        const ratio = (pMajor / pField).toFixed(2);
+        document.getElementById('fieldTitle').innerText = `🏢 ${fieldName} 평균 대비`;
+        document.getElementById('fieldRate').innerText = pField.toFixed(2) + '%';
+        
+        const ratioEl = document.getElementById('fieldRatio');
+        if (pMajor > pField) {
+            ratioEl.innerHTML = `🔥 평균의 <span class="good">${ratio}배</span> 수준`;
+        } else if (pMajor < pField) {
+            ratioEl.innerHTML = `📉 평균의 <span class="bad">${ratio}배</span> 수준`;
+        } else {
+            ratioEl.innerHTML = `<span class="neutral">평균과 동일한 수준</span>`;
+        }
+
+        // 5. 전년도 대비
+        const prevTitle = document.getElementById('prevTitle');
+        const prevRateEl = document.getElementById('prevRate');
+        const prevDiffEl = document.getElementById('prevDiff');
+
+        if (prevData) {
+            const pMajorPrev = prevData.pred_major;
+            const diff = (pMajor - pMajorPrev).toFixed(2);
+            
+            prevTitle.innerText = `📅 전년도(${year - 1}년) 대비`;
+            prevRateEl.innerText = pMajorPrev.toFixed(2) + '%';
+
+            if (diff > 0) {
+                prevDiffEl.innerHTML = `▲ <span class="good">${diff}%p 상승</span> 예측`;
+            } else if (diff < 0) {
+                prevDiffEl.innerHTML = `▼ <span class="bad">${Math.abs(diff).toFixed(2)}%p 하락</span> 예측`;
+            } else {
+                prevDiffEl.innerHTML = `<span class="neutral">- 변동 없음</span>`;
+            }
+        } else {
+            prevTitle.innerText = `📅 전년도 데이터`;
+            prevRateEl.innerText = "-";
+            prevDiffEl.innerHTML = `<span class="neutral">비교 불가</span>`;
+        }
+    }
+</script>
+</body>
+</html>
