@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 전공별 취업률 예측 시스템</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+  background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);
+  min-height:100vh;padding:30px 16px;
+}
+.wrap{max-width:720px;margin:0 auto}
+.header{text-align:center;margin-bottom:24px;color:#fff}
+.header h1{font-size:24px;font-weight:900;margin-bottom:6px}
+.header h1 span{color:#4fc3f7}
+.header p{font-size:13px;opacity:.6}
+
+.card{background:#fff;border-radius:20px;padding:32px 28px;box-shadow:0 24px 64px rgba(0,0,0,.35)}
+
+.form-row{display:flex;gap:14px;margin-bottom:16px}
+.form-group{flex:1}
+.form-group label{display:block;font-size:12px;font-weight:700;color:#555;margin-bottom:7px;letter-spacing:.5px}
+select,input[type=number]{
+  width:100%;padding:13px 15px;border:1.5px solid #e0e4ec;
+  border-radius:12px;font-size:15px;font-family:inherit;background:#f8faff;
+  transition:border-color .2s;
+}
+select:focus,input[type=number]:focus{border-color:#1a73e8;outline:none}
+button{
+  width:100%;padding:15px;border:none;border-radius:12px;
+  background:linear-gradient(135deg,#1a73e8,#6c3de8);
+  color:#fff;font-size:16px;font-weight:800;font-family:inherit;
+  cursor:pointer;transition:transform .15s,opacity .2s;
+}
+button:hover{opacity:.88;transform:translateY(-2px)}
+
+.result-section{display:none;margin-top:28px;border-top:2px solid #f0f4ff;padding-top:28px;animation:fadeUp .4s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.main-result{
+  background:linear-gradient(135deg,#e8f0fe,#ede7f6);
+  border-radius:16px;padding:28px 20px;text-align:center;margin-bottom:18px;
+}
+.main-result .label{font-size:13px;font-weight:700;color:#4a4a8a;margin-bottom:8px;letter-spacing:.5px}
+.main-result .rate{font-size:56px;font-weight:900;color:#1a1a6e;letter-spacing:-3px;line-height:1}
+.main-result .rate span{font-size:22px;opacity:.6}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.cmp-card{background:#f8faff;border:1.5px solid #e4eaf7;border-radius:14px;padding:20px 16px;text-align:center}
+.cmp-card .c-label{font-size:12px;color:#888;margin-bottom:8px;font-weight:600}
+.cmp-card .c-val{font-size:26px;font-weight:900;color:#222;margin-bottom:6px;letter-spacing:-1px}
+.cmp-card .c-sub{font-size:13px;font-weight:600;line-height:1.4}
+
+.trend-section .t-title{font-size:12px;font-weight:700;color:#666;margin-bottom:12px;letter-spacing:.5px}
+.trend-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.trend-row .t-name{font-size:12px;color:#555;width:110px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trend-bar-wrap{flex:1;height:8px;background:#eee;border-radius:99px;overflow:hidden}
+.trend-bar-fill{height:100%;border-radius:99px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.trend-row .t-pct{font-size:12px;font-weight:700;color:#333;width:44px;text-align:right;flex-shrink:0}
+
+.good{color:#1b8a3a}.bad{color:#d93025}.neu{color:#888}
+
+@media(max-width:500px){
+  .form-row,.grid{flex-direction:column;display:flex}
+  .grid{display:flex}
+  .card{padding:22px 16px}
+  .main-result .rate{font-size:44px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>📈 <span>AI</span> 전공 취업률 예측 리포트</h1>
+    <p>Orange3 전공별 독립 선형회귀 모델 · 2019 – 2040</p>
+  </div>
+  <div class="card">
+    <div class="form-row">
+      <div class="form-group">
+        <label>① 공시 연도</label>
+        <input type="number" id="year" value="2026" min="2019" max="2040">
+      </div>
+      <div class="form-group">
+        <label>② 전공 선택</label>
+        <select id="major">
+          <option value="1.공학(IT)">1. 공학 (IT)</option>
+          <option value="2.의약보건">2. 의약보건</option>
+          <option value="3.상경">3. 상경</option>
+          <option value="4.공학(제조)">4. 공학 (제조)</option>
+          <option value="5.예체능">5. 예체능</option>
+          <option value="6.교육">6. 교육</option>
+          <option value="7.사회과학">7. 사회과학</option>
+          <option value="8.인문">8. 인문</option>
+          <option value="9.자연과학/기타">9. 자연과학 / 기타</option>
+        </select>
+      </div>
+    </div>
+    <button onclick="run()">🔍 결과 분석하기</button>
+
+    <div class="result-section" id="resultBox">
+      <div class="main-result">
+        <div class="label" id="mainLabel">예상 취업률</div>
+        <div class="rate" id="mainRate">–<span>%</span></div>
+      </div>
+      <div class="grid">
+        <div class="cmp-card">
+          <div class="c-label" id="fieldLabel">계열 평균</div>
+          <div class="c-val"   id="fieldRate">–</div>
+          <div class="c-sub"  id="fieldSub"></div>
+        </div>
+        <div class="cmp-card">
+          <div class="c-label" id="prevLabel">전년도 대비</div>
+          <div class="c-val"   id="prevRate">–</div>
+          <div class="c-sub"  id="prevSub"></div>
+        </div>
+      </div>
+      <div class="trend-section">
+        <div class="t-title">📊 전체 전공 비교</div>
+        <div id="allBars"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const db = {"2019":{"1.공학(IT)":{"field":"공학계열","pred_major":66.0,"pred_field":62.94},"2.의약보건":{"field":"의약계열","pred_major":79.42,"pred_field":83.21},"3.상경":{"field":"사회계열","pred_major":64.91,"pred_field":61.47},"4.공학(제조)":{"field":"공학계열","pred_major":64.7,"pred_field":62.94},"5.예체능":{"field":"예체능계열","pred_major":60.6,"pred_field":63.29},"6.교육":{"field":"교육계열","pred_major":46.15,"pred_field":61.35},"7.사회과학":{"field":"사회계열","pred_major":57.17,"pred_field":61.47},"8.인문":{"field":"인문계열","pred_major":54.69,"pred_field":54.39},"9.자연과학/기타":{"field":"자연계열","pred_major":59.79,"pred_field":62.94}},"2020":{"1.공학(IT)":{"field":"공학계열","pred_major":65.99,"pred_field":64.06},"2.의약보건":{"field":"의약계열","pred_major":79.89,"pred_field":83.03},"3.상경":{"field":"사회계열","pred_major":64.85,"pred_field":63.1},"4.공학(제조)":{"field":"공학계열","pred_major":65.12,"pred_field":64.06},"5.예체능":{"field":"예체능계열","pred_major":61.46,"pred_field":64.53},"6.교육":{"field":"교육계열","pred_major":46.85,"pred_field":62.66},"7.사회과학":{"field":"사회계열","pred_major":57.37,"pred_field":63.1},"8.인문":{"field":"인문계열","pred_major":55.44,"pred_field":56.12},"9.자연과학/기타":{"field":"자연계열","pred_major":60.45,"pred_field":64.06}},"2021":{"1.공학(IT)":{"field":"공학계열","pred_major":65.98,"pred_field":65.18},"2.의약보건":{"field":"의약계열","pred_major":80.35,"pred_field":82.86},"3.상경":{"field":"사회계열","pred_major":64.8,"pred_field":64.73},"4.공학(제조)":{"field":"공학계열","pred_major":65.54,"pred_field":65.18},"5.예체능":{"field":"예체능계열","pred_major":62.32,"pred_field":65.77},"6.교육":{"field":"교육계열","pred_major":47.54,"pred_field":63.96},"7.사회과학":{"field":"사회계열","pred_major":57.56,"pred_field":64.73},"8.인문":{"field":"인문계열","pred_major":56.19,"pred_field":57.85},"9.자연과학/기타":{"field":"자연계열","pred_major":61.11,"pred_field":65.18}},"2022":{"1.공학(IT)":{"field":"공학계열","pred_major":65.97,"pred_field":66.3},"2.의약보건":{"field":"의약계열","pred_major":80.82,"pred_field":82.68},"3.상경":{"field":"사회계열","pred_major":64.74,"pred_field":66.37},"4.공학(제조)":{"field":"공학계열","pred_major":65.96,"pred_field":66.3},"5.예체능":{"field":"예체능계열","pred_major":63.18,"pred_field":67.01},"6.교육":{"field":"교육계열","pred_major":48.23,"pred_field":65.26},"7.사회과학":{"field":"사회계열","pred_major":57.76,"pred_field":66.37},"8.인문":{"field":"인문계열","pred_major":56.94,"pred_field":59.59},"9.자연과학/기타":{"field":"자연계열","pred_major":61.77,"pred_field":66.3}},"2023":{"1.공학(IT)":{"field":"공학계열","pred_major":65.97,"pred_field":67.42},"2.의약보건":{"field":"의약계열","pred_major":81.29,"pred_field":82.5},"3.상경":{"field":"사회계열","pred_major":64.68,"pred_field":68.0},"4.공학(제조)":{"field":"공학계열","pred_major":66.38,"pred_field":67.42},"5.예체능":{"field":"예체능계열","pred_major":64.04,"pred_field":68.25},"6.교육":{"field":"교육계열","pred_major":48.92,"pred_field":66.57},"7.사회과학":{"field":"사회계열","pred_major":57.96,"pred_field":68.0},"8.인문":{"field":"인문계열","pred_major":57.69,"pred_field":61.32},"9.자연과학/기타":{"field":"자연계열","pred_major":62.43,"pred_field":67.42}},"2024":{"1.공학(IT)":{"field":"공학계열","pred_major":65.96,"pred_field":68.54},"2.의약보건":{"field":"의약계열","pred_major":81.75,"pred_field":82.32},"3.상경":{"field":"사회계열","pred_major":64.62,"pred_field":69.63},"4.공학(제조)":{"field":"공학계열","pred_major":66.81,"pred_field":68.54},"5.예체능":{"field":"예체능계열","pred_major":64.89,"pred_field":69.49},"6.교육":{"field":"교육계열","pred_major":49.61,"pred_field":67.87},"7.사회과학":{"field":"사회계열","pred_major":58.15,"pred_field":69.63},"8.인문":{"field":"인문계열","pred_major":58.44,"pred_field":63.05},"9.자연과학/기타":{"field":"자연계열","pred_major":63.09,"pred_field":68.54}},"2025":{"1.공학(IT)":{"field":"공학계열","pred_major":65.95,"pred_field":69.66},"2.의약보건":{"field":"의약계열","pred_major":82.22,"pred_field":82.14},"3.상경":{"field":"사회계열","pred_major":64.56,"pred_field":71.27},"4.공학(제조)":{"field":"공학계열","pred_major":67.23,"pred_field":69.66},"5.예체능":{"field":"예체능계열","pred_major":65.75,"pred_field":70.73},"6.교육":{"field":"교육계열","pred_major":50.31,"pred_field":69.17},"7.사회과학":{"field":"사회계열","pred_major":58.35,"pred_field":71.27},"8.인문":{"field":"인문계열","pred_major":59.19,"pred_field":64.78},"9.자연과학/기타":{"field":"자연계열","pred_major":63.74,"pred_field":69.66}},"2026":{"1.공학(IT)":{"field":"공학계열","pred_major":65.94,"pred_field":70.78},"2.의약보건":{"field":"의약계열","pred_major":82.69,"pred_field":81.97},"3.상경":{"field":"사회계열","pred_major":64.5,"pred_field":72.9},"4.공학(제조)":{"field":"공학계열","pred_major":67.65,"pred_field":70.78},"5.예체능":{"field":"예체능계열","pred_major":66.61,"pred_field":71.97},"6.교육":{"field":"교육계열","pred_major":51.0,"pred_field":70.48},"7.사회과학":{"field":"사회계열","pred_major":58.55,"pred_field":72.9},"8.인문":{"field":"인문계열","pred_major":59.94,"pred_field":66.51},"9.자연과학/기타":{"field":"자연계열","pred_major":64.4,"pred_field":70.78}},"2027":{"1.공학(IT)":{"field":"공학계열","pred_major":65.94,"pred_field":71.9},"2.의약보건":{"field":"의약계열","pred_major":83.15,"pred_field":81.79},"3.상경":{"field":"사회계열","pred_major":64.44,"pred_field":74.53},"4.공학(제조)":{"field":"공학계열","pred_major":68.07,"pred_field":71.9},"5.예체능":{"field":"예체능계열","pred_major":67.47,"pred_field":73.21},"6.교육":{"field":"교육계열","pred_major":51.69,"pred_field":71.78},"7.사회과학":{"field":"사회계열","pred_major":58.74,"pred_field":74.53},"8.인문":{"field":"인문계열","pred_major":60.69,"pred_field":68.24},"9.자연과학/기타":{"field":"자연계열","pred_major":65.06,"pred_field":71.9}},"2028":{"1.공학(IT)":{"field":"공학계열","pred_major":65.93,"pred_field":73.02},"2.의약보건":{"field":"의약계열","pred_major":83.62,"pred_field":81.61},"3.상경":{"field":"사회계열","pred_major":64.38,"pred_field":76.17},"4.공학(제조)":{"field":"공학계열","pred_major":68.49,"pred_field":73.02},"5.예체능":{"field":"예체능계열","pred_major":68.32,"pred_field":74.44},"6.교육":{"field":"교육계열","pred_major":52.38,"pred_field":73.09},"7.사회과학":{"field":"사회계열","pred_major":58.94,"pred_field":76.17},"8.인문":{"field":"인문계열","pred_major":61.44,"pred_field":69.97},"9.자연과학/기타":{"field":"자연계열","pred_major":65.72,"pred_field":73.02}},"2029":{"1.공학(IT)":{"field":"공학계열","pred_major":65.92,"pred_field":74.14},"2.의약보건":{"field":"의약계열","pred_major":84.09,"pred_field":81.43},"3.상경":{"field":"사회계열","pred_major":64.32,"pred_field":77.8},"4.공학(제조)":{"field":"공학계열","pred_major":68.92,"pred_field":74.14},"5.예체능":{"field":"예체능계열","pred_major":69.18,"pred_field":75.68},"6.교육":{"field":"교육계열","pred_major":53.07,"pred_field":74.39},"7.사회과학":{"field":"사회계열","pred_major":59.14,"pred_field":77.8},"8.인문":{"field":"인문계열","pred_major":62.19,"pred_field":71.71},"9.자연과학/기타":{"field":"자연계열","pred_major":66.38,"pred_field":74.14}},"2030":{"1.공학(IT)":{"field":"공학계열","pred_major":65.91,"pred_field":75.26},"2.의약보건":{"field":"의약계열","pred_major":84.55,"pred_field":81.26},"3.상경":{"field":"사회계열","pred_major":64.26,"pred_field":79.43},"4.공학(제조)":{"field":"공학계열","pred_major":69.34,"pred_field":75.26},"5.예체능":{"field":"예체능계열","pred_major":70.04,"pred_field":76.92},"6.교육":{"field":"교육계열","pred_major":53.77,"pred_field":75.69},"7.사회과학":{"field":"사회계열","pred_major":59.34,"pred_field":79.43},"8.인문":{"field":"인문계열","pred_major":62.94,"pred_field":73.44},"9.자연과학/기타":{"field":"자연계열","pred_major":67.04,"pred_field":75.26}},"2031":{"1.공학(IT)":{"field":"공학계열","pred_major":65.9,"pred_field":76.38},"2.의약보건":{"field":"의약계열","pred_major":85.02,"pred_field":81.08},"3.상경":{"field":"사회계열","pred_major":64.2,"pred_field":81.07},"4.공학(제조)":{"field":"공학계열","pred_major":69.76,"pred_field":76.38},"5.예체능":{"field":"예체능계열","pred_major":70.9,"pred_field":78.16},"6.교육":{"field":"교육계열","pred_major":54.46,"pred_field":77.0},"7.사회과학":{"field":"사회계열","pred_major":59.53,"pred_field":81.07},"8.인문":{"field":"인문계열","pred_major":63.69,"pred_field":75.17},"9.자연과학/기타":{"field":"자연계열","pred_major":67.7,"pred_field":76.38}},"2032":{"1.공학(IT)":{"field":"공학계열","pred_major":65.9,"pred_field":77.5},"2.의약보건":{"field":"의약계열","pred_major":85.49,"pred_field":80.9},"3.상경":{"field":"사회계열","pred_major":64.15,"pred_field":82.7},"4.공학(제조)":{"field":"공학계열","pred_major":70.18,"pred_field":77.5},"5.예체능":{"field":"예체능계열","pred_major":71.75,"pred_field":79.4},"6.교육":{"field":"교육계열","pred_major":55.15,"pred_field":78.3},"7.사회과학":{"field":"사회계열","pred_major":59.73,"pred_field":82.7},"8.인문":{"field":"인문계열","pred_major":64.44,"pred_field":76.9},"9.자연과학/기타":{"field":"자연계열","pred_major":68.36,"pred_field":77.5}},"2033":{"1.공학(IT)":{"field":"공학계열","pred_major":65.89,"pred_field":78.62},"2.의약보건":{"field":"의약계열","pred_major":85.95,"pred_field":80.72},"3.상경":{"field":"사회계열","pred_major":64.09,"pred_field":84.33},"4.공학(제조)":{"field":"공학계열","pred_major":70.6,"pred_field":78.62},"5.예체능":{"field":"예체능계열","pred_major":72.61,"pred_field":80.64},"6.교육":{"field":"교육계열","pred_major":55.84,"pred_field":79.6},"7.사회과학":{"field":"사회계열","pred_major":59.93,"pred_field":84.33},"8.인문":{"field":"인문계열","pred_major":65.19,"pred_field":78.63},"9.자연과학/기타":{"field":"자연계열","pred_major":69.02,"pred_field":78.62}},"2034":{"1.공학(IT)":{"field":"공학계열","pred_major":65.88,"pred_field":79.74},"2.의약보건":{"field":"의약계열","pred_major":86.42,"pred_field":80.54},"3.상경":{"field":"사회계열","pred_major":64.03,"pred_field":85.97},"4.공학(제조)":{"field":"공학계열","pred_major":71.03,"pred_field":79.74},"5.예체능":{"field":"예체능계열","pred_major":73.47,"pred_field":81.88},"6.교육":{"field":"교육계열","pred_major":56.53,"pred_field":80.91},"7.사회과학":{"field":"사회계열","pred_major":60.12,"pred_field":85.97},"8.인문":{"field":"인문계열","pred_major":65.94,"pred_field":80.36},"9.자연과학/기타":{"field":"자연계열","pred_major":69.68,"pred_field":79.74}},"2035":{"1.공학(IT)":{"field":"공학계열","pred_major":65.87,"pred_field":80.86},"2.의약보건":{"field":"의약계열","pred_major":86.89,"pred_field":80.37},"3.상경":{"field":"사회계열","pred_major":63.97,"pred_field":87.6},"4.공학(제조)":{"field":"공학계열","pred_major":71.45,"pred_field":80.86},"5.예체능":{"field":"예체능계열","pred_major":74.33,"pred_field":83.12},"6.교육":{"field":"교육계열","pred_major":57.23,"pred_field":82.21},"7.사회과학":{"field":"사회계열","pred_major":60.32,"pred_field":87.6},"8.인문":{"field":"인문계열","pred_major":66.69,"pred_field":82.09},"9.자연과학/기타":{"field":"자연계열","pred_major":70.33,"pred_field":80.86}},"2036":{"1.공학(IT)":{"field":"공학계열","pred_major":65.87,"pred_field":81.98},"2.의약보건":{"field":"의약계열","pred_major":87.35,"pred_field":80.19},"3.상경":{"field":"사회계열","pred_major":63.91,"pred_field":89.23},"4.공학(제조)":{"field":"공학계열","pred_major":71.87,"pred_field":81.98},"5.예체능":{"field":"예체능계열","pred_major":75.18,"pred_field":84.36},"6.교육":{"field":"교육계열","pred_major":57.92,"pred_field":83.51},"7.사회과학":{"field":"사회계열","pred_major":60.52,"pred_field":89.23},"8.인문":{"field":"인문계열","pred_major":67.44,"pred_field":83.83},"9.자연과학/기타":{"field":"자연계열","pred_major":70.99,"pred_field":81.98}},"2037":{"1.공학(IT)":{"field":"공학계열","pred_major":65.86,"pred_field":83.1},"2.의약보건":{"field":"의약계열","pred_major":87.82,"pred_field":80.01},"3.상경":{"field":"사회계열","pred_major":63.85,"pred_field":90.87},"4.공학(제조)":{"field":"공학계열","pred_major":72.29,"pred_field":83.1},"5.예체능":{"field":"예체능계열","pred_major":76.04,"pred_field":85.59},"6.교육":{"field":"교육계열","pred_major":58.61,"pred_field":84.82},"7.사회과학":{"field":"사회계열","pred_major":60.71,"pred_field":90.87},"8.인문":{"field":"인문계열","pred_major":68.19,"pred_field":85.56},"9.자연과학/기타":{"field":"자연계열","pred_major":71.65,"pred_field":83.1}},"2038":{"1.공학(IT)":{"field":"공학계열","pred_major":65.85,"pred_field":84.22},"2.의약보건":{"field":"의약계열","pred_major":88.29,"pred_field":79.83},"3.상경":{"field":"사회계열","pred_major":63.79,"pred_field":92.5},"4.공학(제조)":{"field":"공학계열","pred_major":72.72,"pred_field":84.22},"5.예체능":{"field":"예체능계열","pred_major":76.9,"pred_field":86.83},"6.교육":{"field":"교육계열","pred_major":59.3,"pred_field":86.12},"7.사회과학":{"field":"사회계열","pred_major":60.91,"pred_field":92.5},"8.인문":{"field":"인문계열","pred_major":68.94,"pred_field":87.29},"9.자연과학/기타":{"field":"자연계열","pred_major":72.31,"pred_field":84.22}},"2039":{"1.공학(IT)":{"field":"공학계열","pred_major":65.84,"pred_field":85.34},"2.의약보건":{"field":"의약계열","pred_major":88.75,"pred_field":79.66},"3.상경":{"field":"사회계열","pred_major":63.73,"pred_field":94.13},"4.공학(제조)":{"field":"공학계열","pred_major":73.14,"pred_field":85.34},"5.예체능":{"field":"예체능계열","pred_major":77.76,"pred_field":88.07},"6.교육":{"field":"교육계열","pred_major":59.99,"pred_field":87.43},"7.사회과학":{"field":"사회계열","pred_major":61.11,"pred_field":94.13},"8.인문":{"field":"인문계열","pred_major":69.69,"pred_field":89.02},"9.자연과학/기타":{"field":"자연계열","pred_major":72.97,"pred_field":85.34}},"2040":{"1.공학(IT)":{"field":"공학계열","pred_major":65.83,"pred_field":86.46},"2.의약보건":{"field":"의약계열","pred_major":89.22,"pred_field":79.48},"3.상경":{"field":"사회계열","pred_major":63.67,"pred_field":95.77},"4.공학(제조)":{"field":"공학계열","pred_major":73.56,"pred_field":86.46},"5.예체능":{"field":"예체능계열","pred_major":78.61,"pred_field":89.31},"6.교육":{"field":"교육계열","pred_major":60.69,"pred_field":88.73},"7.사회과학":{"field":"사회계열","pred_major":61.3,"pred_field":95.77},"8.인문":{"field":"인문계열","pred_major":70.44,"pred_field":90.75},"9.자연과학/기타":{"field":"자연계열","pred_major":73.63,"pred_field":86.46}}};
+const MAJORS = [
+  "1.공학(IT)","2.의약보건","3.상경","4.공학(제조)",
+  "5.예체능","6.교육","7.사회과학","8.인문","9.자연과학/기타"
+];
+
+function run(){
+  const year  = parseInt(document.getElementById('year').value, 10);
+  const major = document.getElementById('major').value;
+  if(year<2019||year>2040){ alert('조회 가능: 2019~2040'); return; }
+  const ys=String(year), yp=String(year-1);
+  if(!db[ys]||!db[ys][major]){ alert('데이터 없음'); return; }
+
+  const cur  = db[ys][major];
+  const prev = db[yp] ? db[yp][major] : null;
+  const pm=cur.pred_major, pf=cur.pred_field, fname=cur.field;
+
+  document.getElementById('resultBox').style.display='block';
+  document.getElementById('mainLabel').textContent=`${year}년 [${major}] 예상 취업률`;
+  document.getElementById('mainRate').innerHTML=`${pm.toFixed(2)}<span>%</span>`;
+
+  // 계열 비교
+  const ratio=(pm/pf).toFixed(2);
+  document.getElementById('fieldLabel').textContent=`🏢 ${fname} 평균`;
+  document.getElementById('fieldRate').textContent=pf.toFixed(2)+'%';
+  const fsub=document.getElementById('fieldSub');
+  if(pm>pf)      fsub.innerHTML=`🔥 평균의 <span class="good">${ratio}배</span>`;
+  else if(pm<pf) fsub.innerHTML=`📉 평균의 <span class="bad">${ratio}배</span>`;
+  else           fsub.innerHTML=`<span class="neu">평균과 동일</span>`;
+
+  // 전년도 비교
+  document.getElementById('prevLabel').textContent=`📅 ${year-1}년 대비`;
+  if(prev){
+    const diff=(pm-prev.pred_major);
+    document.getElementById('prevRate').textContent=prev.pred_major.toFixed(2)+'%';
+    const ps=document.getElementById('prevSub');
+    if(diff>0.005)       ps.innerHTML=`▲ <span class="good">${diff.toFixed(2)}%p 상승</span>`;
+    else if(diff<-0.005) ps.innerHTML=`▼ <span class="bad">${Math.abs(diff).toFixed(2)}%p 하락</span>`;
+    else                 ps.innerHTML=`<span class="neu">변동 없음</span>`;
+  } else {
+    document.getElementById('prevRate').textContent='–';
+    document.getElementById('prevSub').innerHTML=`<span class="neu">비교 불가</span>`;
+  }
+
+  // 전체 전공 비교 바
+  const allVals = MAJORS.map(m=>({name:m, val:db[ys][m].pred_major}))
+                        .sort((a,b)=>b.val-a.val);
+  const maxVal  = Math.max(...allVals.map(v=>v.val));
+  let html='';
+  allVals.forEach(item=>{
+    const sel   = item.name===major;
+    const color = sel ? '#1a73e8' : '#c5cae9';
+    const pct   = (item.val/maxVal*100).toFixed(1);
+    html+=`<div class="trend-row">
+      <span class="t-name" style="${sel?'font-weight:900;color:#1a1a6e':''}">${item.name}</span>
+      <div class="trend-bar-wrap">
+        <div class="trend-bar-fill" style="width:${pct}%;background:${color}"></div>
+      </div>
+      <span class="t-pct" style="${sel?'color:#1a73e8;font-weight:900':''}">${item.val.toFixed(1)}%</span>
+    </div>`;
+  });
+  document.getElementById('allBars').innerHTML=html;
+}
+</script>
+</body>
+</html>
